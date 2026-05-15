@@ -9,7 +9,7 @@ import { buildOAuthRouter } from "./oauth/routes.js";
 import { buildAdminRouter } from "./admin/routes.js";
 import { buildMcpRouter } from "./mcp/http.js";
 
-export function buildApp({ config, db }) {
+export function buildApp({ config, db, cache }) {
   const app = express();
   app.disable("x-powered-by");
   app.use(helmet());
@@ -43,11 +43,14 @@ export function buildApp({ config, db }) {
 
   app.locals.config = config;
   app.locals.db = db;
+  app.locals.cache = cache;
 
-  app.get("/health", (_req, res) => {
+  app.get("/health", async (_req, res) => {
+    const cacheHealth = cache ? await cache.health() : { enabled: false, status: "disabled" };
     res.json({
       status: "ok",
       service: "wb-claude-mcp",
+      cache: cacheHealth,
       timestamp: new Date().toISOString(),
     });
   });

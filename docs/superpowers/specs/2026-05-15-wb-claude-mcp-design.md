@@ -207,12 +207,7 @@ Production deployment needs:
 - Logs with secret redaction.
 - A TLS reverse proxy that terminates HTTPS and forwards traffic to the app container.
 
-TLS deployment supports two modes:
-
-- Domain mode: set `PUBLIC_HOST` and `BASE_URL=https://<domain>`. Caddy obtains and renews a public certificate automatically.
-- IP-only mode: leave `PUBLIC_HOST` empty, set `PUBLIC_IP`, and set `BASE_URL=https://<ip>`. The TLS proxy uses Certbot 5.4+ to obtain a public Let's Encrypt short-lived IP certificate and runs a renewal loop that reloads Caddy after renewal.
-
-Domain mode is preferred because IP certificates are short-lived and require stricter automation. IP-only mode requires a stable public IP address and externally reachable ports `80` and `443`.
+TLS deployment supports domain mode only: set `PUBLIC_HOST` and `BASE_URL=https://<domain>`. Caddy obtains and renews a public certificate automatically. HTTPS by server address is not supported because the attempted address-certificate flow produced invalid-certificate behavior; use a domain or subdomain that points to the server.
 
 Claude custom connector setup should use the public `/mcp` URL. Localhost will not work from Claude's hosted connector UI unless exposed through a public HTTPS tunnel for testing.
 

@@ -15,8 +15,6 @@ services:
     volumes:
       - caddy-data:/data
       - caddy-config:/config
-      - letsencrypt:/etc/letsencrypt
-      - certbot-www:/var/www/certbot
 
   postgres:
     image: postgres:16-alpine
@@ -34,12 +32,27 @@ services:
       timeout: 5s
       retries: 5
 
+  redis:
+    image: redis:7-alpine
+    container_name: wb-claude-mcp-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   wb-mcp:
     build: .
     container_name: wb-claude-mcp
     restart: unless-stopped
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     env_file:
       - .env
@@ -54,7 +67,6 @@ services:
 
 volumes:
   postgres-data:
+  redis-data:
   caddy-data:
   caddy-config:
-  letsencrypt:
-  certbot-www:

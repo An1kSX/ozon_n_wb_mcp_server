@@ -11,6 +11,8 @@ export function buildConfig(env = process.env) {
     mcpResourceUrl: `${baseUrl}/mcp`,
     databaseUrl: requireSecret(env, "DATABASE_URL", "postgres://postgres:postgres@localhost:5432/wb_mcp"),
     databasePoolMax: Number(env.DATABASE_POOL_MAX || 10),
+    redisUrl: env.REDIS_URL || "",
+    cacheDefaultTtlSeconds: Number(env.CACHE_DEFAULT_TTL_SECONDS || 300),
     tokenSigningSecret: requireSecret(env, "TOKEN_SIGNING_SECRET", "dev-token-signing-secret-change-me-32"),
     encryptionKey: requireSecret(env, "ENCRYPTION_KEY", "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"),
     sessionSecret: requireSecret(env, "SESSION_SECRET", "dev-session-secret-change-me-32"),

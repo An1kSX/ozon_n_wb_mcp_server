@@ -9,7 +9,11 @@ describe("health endpoint", () => {
     const res = await request(app).get("/health");
 
     expect(res.status).toBe(200);
-    expect(res.body).toMatchObject({ status: "ok", service: "wb-claude-mcp" });
+    expect(res.body).toMatchObject({
+      status: "ok",
+      service: "wb-claude-mcp",
+      cache: { enabled: false, status: "disabled" },
+    });
     expect(res.body.timestamp).toEqual(expect.any(String));
     await cleanup();
   });

@@ -18,7 +18,7 @@
 - [ ] Add Ozon Seller and Performance API clients with allowlisted endpoints.
 - [ ] Add Ozon MCP tools for monthly sales, profit, ad spend by SKU, and logistics share.
 - [ ] Update Docker Compose with Postgres and `DATABASE_URL`.
-- [ ] Add TLS proxy with Caddy domain mode and Certbot IP-only mode.
+- [ ] Add TLS proxy with Caddy domain mode.
 - [ ] Update README and `.env.example`.
 - [ ] Run `npm test -- --run` and `docker compose build` where Node/Docker are available.
 

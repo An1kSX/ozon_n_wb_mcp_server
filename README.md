@@ -31,29 +31,17 @@ docker compose up -d --build
 
 The app listens only inside Docker on port `3000`. The public entrypoint is the `tls-proxy` service on ports `80` and `443`.
 
-Domain mode is preferred:
+Configure the public domain:
 
 ```env
 PUBLIC_HOST=marketplace-mcp.example.com
-PUBLIC_IP=
 BASE_URL=https://marketplace-mcp.example.com
 ACME_EMAIL=admin@example.com
 ```
 
-In domain mode, Caddy automatically obtains and renews a public certificate.
+Caddy automatically obtains and renews a public certificate for `PUBLIC_HOST`. HTTPS by server address is not supported; use a domain or subdomain that points to the server. Ports `80` and `443` must be reachable from the internet.
 
-IP-only mode is supported when there is no domain:
-
-```env
-PUBLIC_HOST=
-PUBLIC_IP=203.0.113.10
-BASE_URL=https://203.0.113.10
-ACME_EMAIL=admin@example.com
-```
-
-In IP-only mode, the TLS proxy uses Certbot 5.4+ to request a public Let's Encrypt short-lived IP certificate and runs a renewal loop. The server must have a public static IPv4 or IPv6 address, and ports `80` and `443` must be reachable from the internet.
-
-Postgres runs as a separate Compose service and stores data in the `postgres-data` Docker volume.
+Postgres runs as a separate Compose service and stores data in the `postgres-data` Docker volume. Redis runs as a separate Compose service with append-only persistence enabled and stores cache data in the `redis-data` Docker volume.
 
 Check health:
 

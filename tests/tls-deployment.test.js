@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 
 describe("TLS deployment configuration", () => {
-  it("runs the app behind a TLS proxy instead of publishing app port 3000", () => {
+  it("runs the app behind a domain-only TLS proxy instead of publishing app port 3000", () => {
     const compose = readFileSync("docker-compose.yml", "utf8");
 
     expect(compose).toContain("tls-proxy:");
@@ -13,14 +13,13 @@ describe("TLS deployment configuration", () => {
     expect(compose).not.toContain('"3000:3000"');
   });
 
-  it("supports domain and IP-only certificate modes", () => {
+  it("requires PUBLIC_HOST and does not contain address-certificate logic", () => {
     const entrypoint = readFileSync("docker/tls/entrypoint.sh", "utf8");
 
-    expect(entrypoint).toContain("PUBLIC_HOST");
-    expect(entrypoint).toContain("PUBLIC_IP");
-    expect(entrypoint).toContain("--preferred-profile shortlived");
-    expect(entrypoint).toContain("--ip-address");
-    expect(entrypoint).toContain("certbot renew");
-    expect(entrypoint).toContain("caddy reload");
+    expect(entrypoint).toContain("PUBLIC_HOST is required");
+    expect(entrypoint).toContain("caddy run");
+    expect(entrypoint).not.toContain("PUBLIC_IP");
+    expect(entrypoint).not.toContain("certbot");
+    expect(entrypoint).not.toContain("--ip-address");
   });
 });

@@ -21,7 +21,12 @@ export async function createTestApp(overrides = {}) {
   const { Pool } = memoryDb.adapters.createPg();
   const pool = new Pool();
   const db = await initializeDatabase(config, { pool });
-  const app = buildApp({ config, db });
+  const cache = {
+    enabled: false,
+    health: async () => ({ enabled: false, status: "disabled" }),
+    close: async () => {},
+  };
+  const app = buildApp({ config, db, cache });
   return {
     app,
     config,
