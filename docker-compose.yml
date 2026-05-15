@@ -1,0 +1,60 @@
+services:
+  tls-proxy:
+    build:
+      context: ./docker/tls
+    container_name: wb-claude-mcp-tls
+    restart: unless-stopped
+    depends_on:
+      wb-mcp:
+        condition: service_healthy
+    env_file:
+      - .env
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy-data:/data
+      - caddy-config:/config
+      - letsencrypt:/etc/letsencrypt
+      - certbot-www:/var/www/certbot
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: wb-claude-mcp-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: wb_mcp
+      POSTGRES_USER: wb_mcp
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wb_mcp -d wb_mcp"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  wb-mcp:
+    build: .
+    container_name: wb-claude-mcp
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  postgres-data:
+  caddy-data:
+  caddy-config:
+  letsencrypt:
+  certbot-www:
