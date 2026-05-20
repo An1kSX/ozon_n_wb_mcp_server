@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import { describe, expect, it } from "vitest";
 import request from "supertest";
 import { createTestApp } from "./helpers/app.js";
+import { callsProtectedTool } from "../src/mcp/auth.js";
 
 async function getAccessToken(app, config) {
   const client = await request(app).post("/register").send({
@@ -77,5 +78,11 @@ describe("MCP OAuth gate", () => {
     expect(res.status).toBe(200);
     expect(JSON.stringify(res.body)).toContain("content");
     await cleanup();
+  });
+
+  it("protects expanded Ozon tools", () => {
+    expect(callsProtectedTool({ method: "tools/call", params: { name: "get_ozon_analytics_data" } })).toBe(true);
+    expect(callsProtectedTool({ method: "tools/call", params: { name: "list_ozon_ad_campaigns" } })).toBe(true);
+    expect(callsProtectedTool({ method: "tools/call", params: { name: "get_ozon_finance_realization" } })).toBe(true);
   });
 });

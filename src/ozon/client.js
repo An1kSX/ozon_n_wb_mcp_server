@@ -20,19 +20,31 @@ export async function callOzonSellerApi({ db, config, accountId, endpointKey, in
   return handleOzonResponse(response);
 }
 
-export async function requestOzonPerformanceReport({ db, config, accountId, input }) {
+export async function callOzonPerformanceApi({ db, config, accountId, endpointKey, input }) {
+  const endpoint = OZON_PERFORMANCE_ENDPOINTS[endpointKey];
+  if (!endpoint || endpointKey === "token") throw new Error("Unknown Ozon Performance endpoint");
   const credentials = await getMarketplaceCredentials({ db, config, id: accountId, marketplace: "ozon" });
   const token = await getPerformanceAccessToken(credentials);
-  const endpoint = OZON_PERFORMANCE_ENDPOINTS.statistics;
   const response = await axios({
     method: endpoint.method,
     url: `${endpoint.baseUrl}${endpoint.path}`,
-    data: input,
+    data: endpoint.method === "GET" ? undefined : input,
+    params: endpoint.method === "GET" ? input : undefined,
     headers: { Authorization: `Bearer ${token}` },
     validateStatus: () => true,
     timeout: 30000,
   });
   return handleOzonResponse(response);
+}
+
+export async function requestOzonPerformanceReport({ db, config, accountId, input }) {
+  return callOzonPerformanceApi({
+    db,
+    config,
+    accountId,
+    endpointKey: "statistics",
+    input,
+  });
 }
 
 async function getPerformanceAccessToken(credentials) {

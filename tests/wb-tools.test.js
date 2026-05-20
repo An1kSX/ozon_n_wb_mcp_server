@@ -39,4 +39,26 @@ describe("Wildberries API client", () => {
     })).rejects.toThrow("Unknown WB endpoint");
     await cleanup();
   });
+
+  it("calls newly allowlisted WB seller analytics endpoints", async () => {
+    const { db, config, cleanup } = await createTestApp();
+    await createMarketplaceAccount({ db, config, id: "main", marketplace: "wildberries", name: "Main WB", credentials: { apiToken: "wb-secret-token" } });
+
+    nock("https://seller-analytics-api.wildberries.ru", {
+      reqheaders: { Authorization: "wb-secret-token" },
+    })
+      .post("/api/v2/nm-report/grouped/history", { period: { begin: "2026-04-01", end: "2026-04-30" } })
+      .reply(200, { data: [] });
+
+    const data = await callWbApi({
+      db,
+      config,
+      accountId: "main",
+      endpointKey: "nmReportGroupedHistory",
+      input: { period: { begin: "2026-04-01", end: "2026-04-30" } },
+    });
+
+    expect(data).toEqual({ data: [] });
+    await cleanup();
+  });
 });

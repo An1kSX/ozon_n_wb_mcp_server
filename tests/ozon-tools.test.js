@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import nock from "nock";
 import { createTestApp } from "./helpers/app.js";
 import { createMarketplaceAccount } from "../src/accounts/repository.js";
-import { callOzonSellerApi, requestOzonPerformanceReport } from "../src/ozon/client.js";
+import { callOzonPerformanceApi, callOzonSellerApi, requestOzonPerformanceReport } from "../src/ozon/client.js";
 import { aggregateOzonMonthlyFinance } from "../src/ozon/finance.js";
 
 describe("Ozon API clients and finance aggregation", () => {
@@ -32,6 +32,35 @@ describe("Ozon API clients and finance aggregation", () => {
     });
 
     expect(data).toEqual({ result: { operations: [] } });
+    await cleanup();
+  });
+
+  it("calls newly allowlisted Ozon Seller API report endpoints", async () => {
+    const { db, config, cleanup } = await createTestApp();
+    await createMarketplaceAccount({
+      db,
+      config,
+      id: "ozon-main",
+      marketplace: "ozon",
+      name: "Main Ozon",
+      credentials: { sellerClientId: "client-id", sellerApiKey: "seller-secret" },
+    });
+
+    nock("https://api-seller.ozon.ru", {
+      reqheaders: { "Client-Id": "client-id", "Api-Key": "seller-secret" },
+    })
+      .post("/v1/finance/realization", { date: "2026-04" })
+      .reply(200, { result: { rows: [] } });
+
+    const data = await callOzonSellerApi({
+      db,
+      config,
+      accountId: "ozon-main",
+      endpointKey: "financeRealization",
+      input: { date: "2026-04" },
+    });
+
+    expect(data).toEqual({ result: { rows: [] } });
     await cleanup();
   });
 
@@ -66,6 +95,40 @@ describe("Ozon API clients and finance aggregation", () => {
     });
 
     expect(data).toEqual({ UUID: "report-uuid" });
+    await cleanup();
+  });
+
+  it("lists Ozon Performance campaigns with a bearer token", async () => {
+    const { db, config, cleanup } = await createTestApp();
+    await createMarketplaceAccount({
+      db,
+      config,
+      id: "ozon-main",
+      marketplace: "ozon",
+      name: "Main Ozon",
+      credentials: {
+        sellerClientId: "client-id",
+        sellerApiKey: "seller-secret",
+        performanceApiKey: "perf-access-token",
+      },
+    });
+
+    nock("https://api-performance.ozon.ru", {
+      reqheaders: { authorization: "Bearer perf-access-token" },
+    })
+      .get("/api/client/campaign")
+      .query({ advObjectType: "SKU" })
+      .reply(200, { list: [{ id: "123", title: "Search promo" }] });
+
+    const data = await callOzonPerformanceApi({
+      db,
+      config,
+      accountId: "ozon-main",
+      endpointKey: "campaigns",
+      input: { advObjectType: "SKU" },
+    });
+
+    expect(data).toEqual({ list: [{ id: "123", title: "Search promo" }] });
     await cleanup();
   });
 

@@ -64,6 +64,14 @@ After adding the connector, click Connect. Claude will open the authorization pa
 
 ## Admin Account Setup
 
+Open the browser admin panel:
+
+```text
+https://your-domain.example/admin
+```
+
+Sign in with `ADMIN_USERNAME` and `ADMIN_PASSWORD`. The panel can add or update multiple Wildberries and Ozon accounts. Use a unique `Account ID` for every cabinet; Claude tools use that ID as `accountId`.
+
 Create or update a Wildberries account:
 
 ```bash
@@ -98,11 +106,36 @@ Admin responses never include marketplace credentials.
 - `get_campaign_stat_words`
 - `get_nm_report_detail`
 - `get_nm_report_detail_history`
+- `get_nm_report_grouped_history`
 - `get_search_report`
+- `get_search_report_table_groups`
+- `get_search_report_table_details`
+- `get_search_report_product_search_texts`
+- `get_search_report_product_orders`
 - `get_stocks_products`
+- `get_stocks_groups`
+- `get_stocks_sizes`
+- `get_stocks_offices`
 - `list_csv_reports`
+- `create_csv_report`
+- `retry_csv_report`
+- `get_ozon_analytics_data`
+- `get_ozon_sku_month_analytics`
+- `list_ozon_fbo_postings`
+- `list_ozon_fbs_postings`
+- `get_ozon_finance_realization`
+- `list_ozon_finance_transactions`
+- `list_ozon_cash_flow_statements`
+- `get_ozon_stock_on_warehouses`
+- `list_ozon_products`
+- `get_ozon_product_stocks`
+- `get_ozon_product_prices`
+- `list_ozon_fbo_returns`
+- `list_ozon_fbs_returns`
+- `get_ozon_search_terms`
 - `get_ozon_monthly_sales`
 - `get_ozon_monthly_profit`
+- `list_ozon_ad_campaigns`
 - `get_ozon_ad_expenses_by_sku`
 - `get_ozon_logistics_share`
 
