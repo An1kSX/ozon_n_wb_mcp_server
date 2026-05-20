@@ -255,7 +255,25 @@ import session from "express-session";
 export function buildApp({ config, db }) {
   const app = express();
   app.disable("x-powered-by");
-  app.use(helmet());
+  app.use(
+	helmet({
+		contentSecurityPolicy: {
+			directives: {
+				"default-src": ["'self'"],
+				"base-uri": ["'self'"],
+				"font-src": ["'self'", "https:", "data:"],
+				"form-action": ["'self'", "https://claude.ai", "https://claude.com"],
+				"frame-ancestors": ["'self'"],
+				"img-src": ["'self'", "data:"],
+				"object-src": ["'none'"],
+				"script-src": ["'self'"],
+				"script-src-attr": ["'none'"],
+				"style-src": ["'self'", "https:", "'unsafe-inline'"],
+				"upgrade-insecure-requests": [],
+			},
+		},
+	}),
+);
   app.use(express.json({ limit: "256kb" }));
   app.use(express.urlencoded({ extended: false, limit: "64kb" }));
   app.use(cookieParser());
