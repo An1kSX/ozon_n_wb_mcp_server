@@ -58,6 +58,15 @@ export async function getMarketplaceAccount(db, id) {
   `, [id]);
 }
 
+export async function deleteMarketplaceAccount(db, id) {
+  const result = await db.query("DELETE FROM marketplace_accounts WHERE id = $1", [id]);
+  if (result.rowCount === 0) {
+    const err = new Error("Unknown marketplace account");
+    err.statusCode = 404;
+    throw err;
+  }
+}
+
 export async function getMarketplaceCredentials({ db, config, id, marketplace }) {
   const row = await db.one("SELECT marketplace, encrypted_credentials FROM marketplace_accounts WHERE id = $1", [id]);
   if (!row) {

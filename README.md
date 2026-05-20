@@ -70,7 +70,7 @@ Open the browser admin panel:
 https://your-domain.example/admin
 ```
 
-The browser panel redirects to `/admin/login`. Sign in with `ADMIN_USERNAME` and `ADMIN_PASSWORD`, then use logout when finished. The panel can add or update multiple Wildberries and Ozon accounts. Use a unique `Account ID` for every cabinet; Claude tools use that ID as `accountId`.
+The browser panel redirects to `/admin/login`. Sign in with `ADMIN_USERNAME` and `ADMIN_PASSWORD`, then use logout when finished. The panel can add, update, and delete multiple Wildberries and Ozon accounts. Use a unique `Account ID` for every cabinet; Claude tools use that ID as `accountId`.
 
 Create or update a Wildberries account:
 
@@ -94,6 +94,12 @@ List accounts:
 
 ```bash
 curl -u "$ADMIN_USERNAME:$ADMIN_PASSWORD" https://your-domain.example/admin/accounts
+```
+
+Delete an account:
+
+```bash
+curl -u "$ADMIN_USERNAME:$ADMIN_PASSWORD" -X DELETE https://your-domain.example/admin/accounts/wb-main
 ```
 
 Admin responses never include marketplace credentials.

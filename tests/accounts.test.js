@@ -203,6 +203,70 @@ describe("admin marketplace account storage", () => {
     await cleanup();
   });
 
+  it("deletes an account from the admin panel with CSRF protection", async () => {
+    const { app, db, config, cleanup } = await createTestApp();
+    const agent = request.agent(app);
+    await loginAdmin(agent);
+    await createMarketplaceAccount({
+      db,
+      config,
+      id: "wb-remove",
+      marketplace: "wildberries",
+      name: "Remove WB",
+      credentials: { apiToken: "wb-remove-secret-token" },
+    });
+
+    const panel = await agent.get("/admin");
+    expect(panel.text).toContain("/admin/accounts/wb-remove/delete");
+    const res = await agent
+      .post("/admin/accounts/wb-remove/delete")
+      .type("form")
+      .send({ _csrf: extractCsrfToken(panel.text) });
+
+    expect(res.status).toBe(303);
+    expect(res.headers.location).toBe("/admin");
+    await expect(getMarketplaceCredentials({ db, config, id: "wb-remove" })).rejects.toThrow("Unknown marketplace account");
+    await cleanup();
+  });
+
+  it("rejects account deletion without the CSRF token", async () => {
+    const { app, db, config, cleanup } = await createTestApp();
+    const agent = request.agent(app);
+    await loginAdmin(agent);
+    await createMarketplaceAccount({
+      db,
+      config,
+      id: "wb-keep",
+      marketplace: "wildberries",
+      name: "Keep WB",
+      credentials: { apiToken: "wb-keep-secret-token" },
+    });
+
+    const res = await agent.post("/admin/accounts/wb-keep/delete").type("form").send({});
+
+    expect(res.status).toBe(403);
+    await expect(getMarketplaceCredentials({ db, config, id: "wb-keep" })).resolves.toEqual({ apiToken: "wb-keep-secret-token" });
+    await cleanup();
+  });
+
+  it("deletes an account through the admin JSON API", async () => {
+    const { app, db, config, cleanup } = await createTestApp();
+    await createMarketplaceAccount({
+      db,
+      config,
+      id: "ozon-remove",
+      marketplace: "ozon",
+      name: "Remove Ozon",
+      credentials: { sellerClientId: "seller-client-id", sellerApiKey: "seller-api-key-secret" },
+    });
+
+    const res = await request(app).delete("/admin/accounts/ozon-remove").set("Authorization", adminAuth());
+
+    expect(res.status).toBe(204);
+    await expect(getMarketplaceCredentials({ db, config, id: "ozon-remove" })).rejects.toThrow("Unknown marketplace account");
+    await cleanup();
+  });
+
   it("rejects admin form submissions without the CSRF token", async () => {
     const { app, cleanup } = await createTestApp();
     const agent = request.agent(app);

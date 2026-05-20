@@ -1,7 +1,7 @@
 import express from "express";
 import crypto from "node:crypto";
 import rateLimit from "express-rate-limit";
-import { createMarketplaceAccount, listMarketplaceAccounts } from "../accounts/repository.js";
+import { createMarketplaceAccount, deleteMarketplaceAccount, listMarketplaceAccounts } from "../accounts/repository.js";
 
 export function buildAdminRouter({ config, db }) {
   const router = express.Router();
@@ -80,6 +80,15 @@ export function buildAdminRouter({ config, db }) {
     }
   });
 
+  router.delete("/accounts/:id", async (req, res, next) => {
+    try {
+      await deleteMarketplaceAccount(db, req.params.id);
+      res.status(204).end();
+    } catch (err) {
+      next(err);
+    }
+  });
+
   router.post("/accounts/form", async (req, res, next) => {
     try {
       if (!isValidAdminCsrfToken(req)) {
@@ -88,6 +97,19 @@ export function buildAdminRouter({ config, db }) {
       }
       const account = accountFromForm(req.body);
       await createMarketplaceAccount({ db, config, ...account });
+      res.redirect(303, "/admin");
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.post("/accounts/:id/delete", async (req, res, next) => {
+    try {
+      if (!isValidAdminCsrfToken(req)) {
+        res.status(403).type("html").send(renderMessagePage("Forbidden", "Invalid admin form token."));
+        return;
+      }
+      await deleteMarketplaceAccount(db, req.params.id);
       res.redirect(303, "/admin");
     } catch (err) {
       next(err);
@@ -104,7 +126,7 @@ function isValidBasicAuth(config, req) {
 }
 
 function isAdminApiRequest(req) {
-  return req.path === "/accounts";
+  return req.path === "/accounts" || /^\/accounts\/[a-zA-Z0-9_-]+$/.test(req.path);
 }
 
 function parseBasicAuth(header) {
@@ -194,6 +216,12 @@ function renderAdminPage({ accounts, csrfToken }) {
         <td>${escapeHtml(account.name)}</td>
         <td>${escapeHtml(account.notes || "")}</td>
         <td>${escapeHtml(formatDate(account.updatedAt))}</td>
+        <td>
+          <form method="post" action="/admin/accounts/${escapeHtml(account.id)}/delete">
+            ${csrfInput(csrfToken)}
+            <button class="danger" type="submit">Delete</button>
+          </form>
+        </td>
       </tr>
     `).join("");
 
@@ -220,10 +248,11 @@ function renderAdminPage({ accounts, csrfToken }) {
               <th>Name</th>
               <th>Notes</th>
               <th>Updated</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
-            ${rows || '<tr><td colspan="5" class="muted">No accounts configured yet.</td></tr>'}
+            ${rows || '<tr><td colspan="6" class="muted">No accounts configured yet.</td></tr>'}
           </tbody>
         </table>
       </div>
@@ -317,6 +346,7 @@ function htmlPage(title, body) {
     input { box-sizing: border-box; width: 100%; margin-top: 6px; padding: 10px 12px; border: 1px solid #b9c1cc; font: inherit; }
     button { width: 100%; margin-top: 8px; padding: 11px 14px; border: 0; background: #175cd3; color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
     button.secondary { background: #344054; }
+    button.danger { width: auto; margin-top: 0; padding: 7px 10px; background: #b42318; font-size: 13px; }
     a { color: #175cd3; }
     .error { margin-top: 14px; color: #b42318; }
     @media (max-width: 760px) { .forms { grid-template-columns: 1fr; } }
