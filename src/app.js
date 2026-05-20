@@ -11,6 +11,9 @@ import { buildMcpRouter } from "./mcp/http.js";
 
 export function buildApp({ config, db, cache }) {
   const app = express();
+
+  app.set("trust proxy", 1);
+
   app.disable("x-powered-by");
   app.use(helmet());
   app.use(express.json({ limit: "256kb" }));
