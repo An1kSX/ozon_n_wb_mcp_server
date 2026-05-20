@@ -9,7 +9,8 @@ export function buildMcpRouter({ config, db }) {
   router.post("/mcp", async (req, res, next) => {
     try {
       const user = authenticateMcpRequest(config, req);
-      if (!user && callsProtectedTool(req.body)) {
+
+      if (!user) {
         writeAuthChallenge(config, res);
         return;
       }
@@ -18,6 +19,7 @@ export function buildMcpRouter({ config, db }) {
         sessionIdGenerator: undefined,
         enableJsonResponse: true,
       });
+
       const server = buildMcpServer({ config, db, user });
       await server.connect(transport);
       await transport.handleRequest(req, res, req.body);
