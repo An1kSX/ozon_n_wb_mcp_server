@@ -11,6 +11,15 @@ function extractCsrfToken(html) {
   return html.match(/name="_csrf" value="([^"]+)"/)?.[1];
 }
 
+async function loginAdmin(agent) {
+  const loginPage = await agent.get("/admin/login");
+  const csrf = extractCsrfToken(loginPage.text);
+  return agent
+    .post("/admin/login")
+    .type("form")
+    .send({ _csrf: csrf, username: "admin", password: "admin-password" });
+}
+
 describe("admin marketplace account storage", () => {
   it("stores WB credentials encrypted and returns only safe account fields", async () => {
     const { app, db, config, cleanup } = await createTestApp();
@@ -98,6 +107,8 @@ describe("admin marketplace account storage", () => {
 
   it("renders a minimal admin panel without credential material", async () => {
     const { app, db, config, cleanup } = await createTestApp();
+    const agent = request.agent(app);
+    await loginAdmin(agent);
     await createMarketplaceAccount({
       db,
       config,
@@ -108,7 +119,7 @@ describe("admin marketplace account storage", () => {
       notes: "Primary account",
     });
 
-    const res = await request(app).get("/admin").set("Authorization", adminAuth());
+    const res = await agent.get("/admin");
 
     expect(res.status).toBe(200);
     expect(res.text).toContain("Marketplace Admin");
@@ -118,15 +129,45 @@ describe("admin marketplace account storage", () => {
     await cleanup();
   });
 
+  it("requires browser admin login and supports logout", async () => {
+    const { app, cleanup } = await createTestApp();
+    const agent = request.agent(app);
+
+    const blocked = await agent.get("/admin");
+    expect(blocked.status).toBe(303);
+    expect(blocked.headers.location).toBe("/admin/login");
+
+    const basicAuthDoesNotOpenUi = await request(app).get("/admin").set("Authorization", adminAuth());
+    expect(basicAuthDoesNotOpenUi.status).toBe(303);
+    expect(basicAuthDoesNotOpenUi.headers.location).toBe("/admin/login");
+
+    const login = await loginAdmin(agent);
+    expect(login.status).toBe(303);
+    expect(login.headers.location).toBe("/admin");
+
+    const allowed = await agent.get("/admin");
+    expect(allowed.status).toBe(200);
+    expect(allowed.text).toContain("Marketplace Admin");
+
+    const logout = await agent.post("/admin/logout").type("form").send({ _csrf: extractCsrfToken(allowed.text) });
+    expect(logout.status).toBe(303);
+    expect(logout.headers.location).toBe("/admin/login");
+
+    const blockedAgain = await agent.get("/admin");
+    expect(blockedAgain.status).toBe(303);
+    expect(blockedAgain.headers.location).toBe("/admin/login");
+    await cleanup();
+  });
+
   it("creates WB and Ozon accounts from the admin panel forms", async () => {
     const { app, db, config, cleanup } = await createTestApp();
     const agent = request.agent(app);
-    const panel = await agent.get("/admin").set("Authorization", adminAuth());
+    await loginAdmin(agent);
+    const panel = await agent.get("/admin");
     const csrf = extractCsrfToken(panel.text);
 
     const wb = await agent
       .post("/admin/accounts/form")
-      .set("Authorization", adminAuth())
       .type("form")
       .send({
         _csrf: csrf,
@@ -141,7 +182,6 @@ describe("admin marketplace account storage", () => {
 
     const ozon = await agent
       .post("/admin/accounts/form")
-      .set("Authorization", adminAuth())
       .type("form")
       .send({
         _csrf: csrf,
@@ -165,10 +205,11 @@ describe("admin marketplace account storage", () => {
 
   it("rejects admin form submissions without the CSRF token", async () => {
     const { app, cleanup } = await createTestApp();
+    const agent = request.agent(app);
+    await loginAdmin(agent);
 
-    const res = await request(app)
+    const res = await agent
       .post("/admin/accounts/form")
-      .set("Authorization", adminAuth())
       .type("form")
       .send({ marketplace: "wildberries", id: "wb-main", name: "Main WB", apiToken: "wb-secret-token" });
 

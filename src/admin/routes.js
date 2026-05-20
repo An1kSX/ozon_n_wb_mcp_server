@@ -1,22 +1,56 @@
 import express from "express";
 import crypto from "node:crypto";
+import rateLimit from "express-rate-limit";
 import { createMarketplaceAccount, listMarketplaceAccounts } from "../accounts/repository.js";
 
 export function buildAdminRouter({ config, db }) {
   const router = express.Router();
+
+  router.get("/login", (req, res) => {
+    if (req.session.adminAuthenticated) {
+      res.redirect(303, "/admin");
+      return;
+    }
+    res.type("html").send(renderLoginPage({ csrfToken: ensureAdminCsrfToken(req) }));
+  });
+
+  const loginLimiter = rateLimit({ windowMs: 60_000, limit: 10, standardHeaders: true, legacyHeaders: false });
+
+  router.post("/login", loginLimiter, (req, res) => {
+    if (!isValidAdminCsrfToken(req)) {
+      res.status(403).type("html").send(renderLoginPage({ csrfToken: ensureAdminCsrfToken(req), error: "Invalid form token." }));
+      return;
+    }
+    if (!isValidAdminCredentials(config, normalizeFormValue(req.body.username), normalizeFormValue(req.body.password))) {
+      res.status(401).type("html").send(renderLoginPage({ csrfToken: ensureAdminCsrfToken(req), error: "Invalid username or password." }));
+      return;
+    }
+    req.session.adminAuthenticated = true;
+    req.session.adminCsrfToken = crypto.randomBytes(32).toString("base64url");
+    res.redirect(303, "/admin");
+  });
+
+  router.post("/logout", (req, res) => {
+    if (req.session.adminAuthenticated && !isValidAdminCsrfToken(req)) {
+      res.status(403).type("html").send(renderMessagePage("Forbidden", "Invalid admin form token."));
+      return;
+    }
+    req.session.destroy(() => {
+      res.clearCookie("wb_mcp_sid");
+      res.redirect(303, "/admin/login");
+    });
+  });
+
   router.use((req, res, next) => {
-    const header = req.get("authorization") || "";
-    const [scheme, encoded] = header.split(" ");
-    if (scheme !== "Basic" || !encoded) {
-      writeAdminChallenge(res);
+    if (req.session.adminAuthenticated || (isAdminApiRequest(req) && isValidBasicAuth(config, req))) {
+      next();
       return;
     }
-    const [username, password] = Buffer.from(encoded, "base64").toString("utf8").split(":");
-    if (username !== config.adminUsername || password !== config.adminPassword) {
-      writeAdminChallenge(res);
+    if (isBrowserAdminPage(req)) {
+      res.redirect(303, "/admin/login");
       return;
     }
-    next();
+    writeAdminChallenge(res);
   });
 
   router.get("/", async (req, res, next) => {
@@ -61,6 +95,42 @@ export function buildAdminRouter({ config, db }) {
   });
 
   return router;
+}
+
+function isValidBasicAuth(config, req) {
+  const credentials = parseBasicAuth(req.get("authorization") || "");
+  if (!credentials) return false;
+  return isValidAdminCredentials(config, credentials.username, credentials.password);
+}
+
+function isAdminApiRequest(req) {
+  return req.path === "/accounts";
+}
+
+function parseBasicAuth(header) {
+  const [scheme, encoded] = header.split(" ");
+  if (scheme !== "Basic" || !encoded) return null;
+  const decoded = Buffer.from(encoded, "base64").toString("utf8");
+  const separator = decoded.indexOf(":");
+  if (separator === -1) return null;
+  return {
+    username: decoded.slice(0, separator),
+    password: decoded.slice(separator + 1),
+  };
+}
+
+function isValidAdminCredentials(config, username, password) {
+  return constantTimeEquals(username, config.adminUsername) && constantTimeEquals(password, config.adminPassword);
+}
+
+function constantTimeEquals(left, right) {
+  const leftBuffer = Buffer.from(String(left));
+  const rightBuffer = Buffer.from(String(right));
+  return leftBuffer.length === rightBuffer.length && crypto.timingSafeEqual(leftBuffer, rightBuffer);
+}
+
+function isBrowserAdminPage(req) {
+  return req.method === "GET" && req.path === "/" && req.accepts(["html", "json"]) === "html";
 }
 
 function ensureAdminCsrfToken(req) {
@@ -128,9 +198,15 @@ function renderAdminPage({ accounts, csrfToken }) {
     `).join("");
 
   return htmlPage("Marketplace Admin", `
-    <header>
-      <h1>Marketplace Admin</h1>
-      <p>Manage Wildberries and Ozon accounts available to Claude.</p>
+    <header class="topbar">
+      <div>
+        <h1>Marketplace Admin</h1>
+        <p>Manage Wildberries and Ozon accounts available to Claude.</p>
+      </div>
+      <form method="post" action="/admin/logout">
+        ${csrfInput(csrfToken)}
+        <button class="secondary" type="submit">Logout</button>
+      </form>
     </header>
 
     <section>
@@ -187,6 +263,24 @@ function renderAdminPage({ accounts, csrfToken }) {
   `);
 }
 
+function renderLoginPage({ csrfToken, error = "" }) {
+  return htmlPage("Admin Login", `
+    <main class="login">
+      <section>
+        <h1>Admin Login</h1>
+        <p>Sign in to manage marketplace accounts.</p>
+        ${error ? `<p class="error">${escapeHtml(error)}</p>` : ""}
+        <form method="post" action="/admin/login" autocomplete="off">
+          ${csrfInput(csrfToken)}
+          ${field("username", "Username", "", true)}
+          ${field("password", "Password", "", true, "password")}
+          <button type="submit">Sign In</button>
+        </form>
+      </section>
+    </main>
+  `);
+}
+
 function renderMessagePage(title, message) {
   return htmlPage(title, `<section><h1>${escapeHtml(title)}</h1><p>${escapeHtml(message)}</p><a href="/admin">Back to admin</a></section>`);
 }
@@ -203,6 +297,8 @@ function htmlPage(title, body) {
     body { margin: 0; }
     header, section, main { max-width: 1120px; margin: 0 auto; }
     header { padding: 32px 24px 12px; }
+    .topbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+    .topbar form { min-width: 120px; }
     section { padding: 16px 24px; }
     h1 { margin: 0 0 8px; font-size: 32px; }
     h2 { margin: 0 0 16px; font-size: 20px; }
@@ -215,10 +311,14 @@ function htmlPage(title, body) {
     .muted { color: #6b7785; text-align: center; }
     .forms { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; padding: 8px 24px 40px; }
     .forms section { margin: 0; padding: 20px; background: #fff; border: 1px solid #d8dde6; }
+    .login { max-width: 420px; padding: 48px 24px; }
+    .login section { margin: 0; padding: 24px; background: #fff; border: 1px solid #d8dde6; }
     label { display: block; margin: 0 0 12px; font-size: 14px; font-weight: 700; }
     input { box-sizing: border-box; width: 100%; margin-top: 6px; padding: 10px 12px; border: 1px solid #b9c1cc; font: inherit; }
     button { width: 100%; margin-top: 8px; padding: 11px 14px; border: 0; background: #175cd3; color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
+    button.secondary { background: #344054; }
     a { color: #175cd3; }
+    .error { margin-top: 14px; color: #b42318; }
     @media (max-width: 760px) { .forms { grid-template-columns: 1fr; } }
   </style>
 </head>

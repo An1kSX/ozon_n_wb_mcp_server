@@ -16,8 +16,8 @@ export function buildConfig(env = process.env) {
     tokenSigningSecret: requireSecret(env, "TOKEN_SIGNING_SECRET", "dev-token-signing-secret-change-me-32"),
     encryptionKey: requireSecret(env, "ENCRYPTION_KEY", "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"),
     sessionSecret: requireSecret(env, "SESSION_SECRET", "dev-session-secret-change-me-32"),
-    adminUsername: env.ADMIN_USERNAME || "admin",
-    adminPassword: env.ADMIN_PASSWORD || "admin-password-change-me",
+    adminUsername: requireSecret(env, "ADMIN_USERNAME", "admin"),
+    adminPassword: requireSecret(env, "ADMIN_PASSWORD", "admin-password-change-me"),
     bootstrapUserEmail: env.BOOTSTRAP_USER_EMAIL || "boss@example.com",
     bootstrapUserPassword: env.BOOTSTRAP_USER_PASSWORD || "change-me",
     allowedRedirectHosts: (env.ALLOWED_REDIRECT_HOSTS || defaultRedirectHosts)

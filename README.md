@@ -70,7 +70,7 @@ Open the browser admin panel:
 https://your-domain.example/admin
 ```
 
-Sign in with `ADMIN_USERNAME` and `ADMIN_PASSWORD`. The panel can add or update multiple Wildberries and Ozon accounts. Use a unique `Account ID` for every cabinet; Claude tools use that ID as `accountId`.
+The browser panel redirects to `/admin/login`. Sign in with `ADMIN_USERNAME` and `ADMIN_PASSWORD`, then use logout when finished. The panel can add or update multiple Wildberries and Ozon accounts. Use a unique `Account ID` for every cabinet; Claude tools use that ID as `accountId`.
 
 Create or update a Wildberries account:
 
