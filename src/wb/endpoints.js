@@ -10,7 +10,7 @@ export const WB_ENDPOINTS = {
     path: "/adv/v1/promotion/count",
   },
   advertCampaignsInfo: {
-    method: "POST",
+    method: "GET",
     baseUrl: "https://advert-api.wildberries.ru",
     path: "/api/advert/v2/adverts",
   },

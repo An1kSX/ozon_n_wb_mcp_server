@@ -20,7 +20,9 @@ export async function callWbApi({ db, config, accountId, endpointKey, input }) {
 
   if (response.status === 401 || response.status === 403) {
     const detail = safeWbError(response.data);
-    const err = new Error(`Wildberries rejected credentials for account "${accountId}" on ${endpoint.path} (${response.status})${detail ? `: ${detail}` : ""}`);
+    const err = new Error(
+      `WB ${endpointKey} failed: credentials rejected or missing permissions for account ${accountId}: ${endpoint.method} ${endpoint.path} returned ${response.status}${detail ? `: ${detail}` : ""}`
+    );
     err.statusCode = 502;
     throw err;
   }
@@ -29,8 +31,27 @@ export async function callWbApi({ db, config, accountId, endpointKey, input }) {
     err.statusCode = 429;
     throw err;
   }
+  if (response.status === 402) {
+    let detail = safeWbError(response.data);
+    // Check if it's a subscription issue
+    if (endpointKey.includes("search") || detail.toLowerCase().includes("jam") || detail.toLowerCase().includes("subscription")) {
+      const err = new Error(
+        `WB ${endpointKey} failed: this method requires Jam subscription for this seller account`
+      );
+      err.statusCode = 502;
+      throw err;
+    }
+    const err = new Error(
+      `WB ${endpointKey} failed: this method requires a subscription: ${endpoint.method} ${endpoint.path} returned 402${detail ? `: ${detail}` : ""}`
+    );
+    err.statusCode = 502;
+    throw err;
+  }
   if (response.status >= 400) {
-    const err = new Error(safeWbError(response.data) || "Wildberries API request failed");
+    const detail = safeWbError(response.data);
+    const err = new Error(
+      `WB ${endpointKey} failed: ${endpoint.method} ${endpoint.path} returned ${response.status}${detail ? `: ${detail}` : ""}`
+    );
     err.statusCode = 502;
     throw err;
   }
