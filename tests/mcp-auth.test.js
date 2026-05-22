@@ -85,4 +85,12 @@ describe("MCP OAuth gate", () => {
     expect(callsProtectedTool({ method: "tools/call", params: { name: "list_ozon_ad_campaigns" } })).toBe(true);
     expect(callsProtectedTool({ method: "tools/call", params: { name: "get_ozon_finance_realization" } })).toBe(true);
   });
+
+  it("protects current Wildberries API tools", () => {
+    expect(callsProtectedTool({ method: "tools/call", params: { name: "list_wb_ad_campaigns" } })).toBe(true);
+    expect(callsProtectedTool({ method: "tools/call", params: { name: "get_wb_ad_campaigns_info" } })).toBe(true);
+    expect(callsProtectedTool({ method: "tools/call", params: { name: "get_search_cluster_list" } })).toBe(true);
+    expect(callsProtectedTool({ method: "tools/call", params: { name: "get_search_cluster_daily_stats" } })).toBe(true);
+    expect(callsProtectedTool({ method: "tools/call", params: { name: "get_wb_warehouses_inventory" } })).toBe(true);
+  });
 });

@@ -1,33 +1,58 @@
 export const WB_ENDPOINTS = {
   advertFullstats: {
+    method: "GET",
+    baseUrl: "https://advert-api.wildberries.ru",
+    path: "/adv/v3/fullstats",
+  },
+  advertCampaignsCount: {
+    method: "GET",
+    baseUrl: "https://advert-api.wildberries.ru",
+    path: "/adv/v1/promotion/count",
+  },
+  advertCampaignsInfo: {
     method: "POST",
     baseUrl: "https://advert-api.wildberries.ru",
-    path: "/adv/v2/fullstats",
+    path: "/api/advert/v2/adverts",
+  },
+  searchClusterList: {
+    method: "POST",
+    baseUrl: "https://advert-api.wildberries.ru",
+    path: "/adv/v0/normquery/list",
+  },
+  searchClusterDailyStats: {
+    method: "POST",
+    baseUrl: "https://advert-api.wildberries.ru",
+    path: "/adv/v1/normquery/stats",
   },
   autoStatWords: {
-    method: "GET",
+    method: "POST",
     baseUrl: "https://advert-api.wildberries.ru",
-    path: "/adv/v2/auto/stat-words",
+    path: "/adv/v0/normquery/list",
   },
   campaignStatWords: {
-    method: "GET",
+    method: "POST",
     baseUrl: "https://advert-api.wildberries.ru",
-    path: "/adv/v1/stat/words",
+    path: "/adv/v1/normquery/stats",
   },
   nmReportDetail: {
     method: "POST",
     baseUrl: "https://seller-analytics-api.wildberries.ru",
-    path: "/api/v2/nm-report/detail",
+    path: "/api/analytics/v3/sales-funnel/products",
   },
   nmReportDetailHistory: {
     method: "POST",
     baseUrl: "https://seller-analytics-api.wildberries.ru",
-    path: "/api/v2/nm-report/detail/history",
+    path: "/api/analytics/v3/sales-funnel/products/history",
   },
   nmReportGroupedHistory: {
     method: "POST",
     baseUrl: "https://seller-analytics-api.wildberries.ru",
-    path: "/api/v2/nm-report/grouped/history",
+    path: "/api/analytics/v3/sales-funnel/grouped/history",
+  },
+  wbWarehousesInventory: {
+    method: "POST",
+    baseUrl: "https://seller-analytics-api.wildberries.ru",
+    path: "/api/analytics/v1/stocks-report/wb-warehouses",
   },
   searchReport: {
     method: "POST",

@@ -37,28 +37,52 @@ export function buildMcpServer({ db, config, user }) {
   );
 
   const deps = { db, config, user };
-  registerWbTool(server, {
-    name: "get_advert_fullstats",
-    title: "Get advertising full statistics",
-    description: "Gets Wildberries advertising campaign full statistics for a marketplace account.",
-    endpointKey: "advertFullstats",
-    inputSchema: {
-      accountId: z.string().min(1),
-      request: z.array(z.object({ id: z.number(), dates: z.array(z.string()) })),
+  server.registerTool(
+    "get_advert_fullstats",
+    {
+      title: "Get advertising full statistics",
+      description: "Gets Wildberries advertising campaign statistics from the current official GET /adv/v3/fullstats endpoint.",
+      inputSchema: {
+        accountId: z.string().min(1),
+        ids: z.union([z.string(), z.array(z.number().int().positive())]),
+        beginDate: z.string().min(10),
+        endDate: z.string().min(10),
+      },
+      annotations: { readOnlyHint: true, destructiveHint: false },
     },
-  }, deps);
+    async (args) => {
+      requireUser(user);
+      const data = await callWbApi({
+        db,
+        config,
+        accountId: args.accountId,
+        endpointKey: "advertFullstats",
+        input: {
+          ids: Array.isArray(args.ids) ? args.ids.join(",") : args.ids,
+          beginDate: args.beginDate,
+          endDate: args.endDate,
+        },
+      });
+      return jsonContent(data);
+    },
+  );
 
   const wbReportInput = { accountId: z.string().min(1), request: z.record(z.any()).default({}) };
-  registerWbTool(server, { name: "get_auto_stat_words", title: "Get automatic campaign words", description: "Gets Wildberries phrase-cluster statistics for an automatic campaign.", endpointKey: "autoStatWords", inputSchema: wbReportInput }, deps);
-  registerWbTool(server, { name: "get_campaign_stat_words", title: "Get campaign phrase statistics", description: "Gets Wildberries keyword phrase statistics for a campaign.", endpointKey: "campaignStatWords", inputSchema: wbReportInput }, deps);
-  registerWbTool(server, { name: "get_nm_report_detail", title: "Get product sales funnel detail", description: "Gets Wildberries product card sales funnel statistics.", endpointKey: "nmReportDetail", inputSchema: wbReportInput }, deps);
-  registerWbTool(server, { name: "get_nm_report_detail_history", title: "Get product sales funnel history", description: "Gets Wildberries product card statistics grouped by day.", endpointKey: "nmReportDetailHistory", inputSchema: wbReportInput }, deps);
-  registerWbTool(server, { name: "get_nm_report_grouped_history", title: "Get grouped product sales funnel history", description: "Gets Wildberries product card statistics grouped by selected dimensions.", endpointKey: "nmReportGroupedHistory", inputSchema: wbReportInput }, deps);
+  registerWbTool(server, { name: "list_wb_ad_campaigns", title: "List WB advertising campaigns", description: "Gets Wildberries advertising campaign lists grouped by type and status from the official promotion API.", endpointKey: "advertCampaignsCount", inputSchema: wbReportInput }, deps);
+  registerWbTool(server, { name: "get_wb_ad_campaigns_info", title: "Get WB advertising campaign information", description: "Gets Wildberries advertising campaign information from the official promotion API.", endpointKey: "advertCampaignsInfo", inputSchema: wbReportInput }, deps);
+  registerWbTool(server, { name: "get_search_cluster_list", title: "Get search cluster list", description: "Gets Wildberries active and inactive search clusters from the official promotion API.", endpointKey: "searchClusterList", inputSchema: wbReportInput }, deps);
+  registerWbTool(server, { name: "get_search_cluster_daily_stats", title: "Get search cluster daily stats", description: "Gets Wildberries search cluster statistics detailed by day from the official promotion API.", endpointKey: "searchClusterDailyStats", inputSchema: wbReportInput }, deps);
+  registerWbTool(server, { name: "get_auto_stat_words", title: "Get automatic campaign search clusters", description: "Backward-compatible alias for the current Wildberries search cluster list endpoint.", endpointKey: "autoStatWords", inputSchema: wbReportInput }, deps);
+  registerWbTool(server, { name: "get_campaign_stat_words", title: "Get campaign search cluster daily stats", description: "Backward-compatible alias for the current Wildberries search cluster daily statistics endpoint.", endpointKey: "campaignStatWords", inputSchema: wbReportInput }, deps);
+  registerWbTool(server, { name: "get_nm_report_detail", title: "Get product sales funnel detail", description: "Gets Wildberries product card sales funnel statistics from the official analytics v3 endpoint.", endpointKey: "nmReportDetail", inputSchema: wbReportInput }, deps);
+  registerWbTool(server, { name: "get_nm_report_detail_history", title: "Get product sales funnel history", description: "Gets Wildberries product card statistics grouped by day or week from the official analytics v3 endpoint.", endpointKey: "nmReportDetailHistory", inputSchema: wbReportInput }, deps);
+  registerWbTool(server, { name: "get_nm_report_grouped_history", title: "Get grouped product sales funnel history", description: "Gets Wildberries grouped product card statistics from the official analytics v3 endpoint.", endpointKey: "nmReportGroupedHistory", inputSchema: wbReportInput }, deps);
   registerWbTool(server, { name: "get_search_report", title: "Get search query report", description: "Gets Wildberries search query report data.", endpointKey: "searchReport", inputSchema: wbReportInput }, deps);
   registerWbTool(server, { name: "get_search_report_table_groups", title: "Get search report table groups", description: "Gets Wildberries search report grouped table data.", endpointKey: "searchReportTableGroups", inputSchema: wbReportInput }, deps);
   registerWbTool(server, { name: "get_search_report_table_details", title: "Get search report table details", description: "Gets Wildberries search report detailed table data.", endpointKey: "searchReportTableDetails", inputSchema: wbReportInput }, deps);
   registerWbTool(server, { name: "get_search_report_product_search_texts", title: "Get product search texts", description: "Gets Wildberries search phrases that led customers to a product.", endpointKey: "searchReportProductSearchTexts", inputSchema: wbReportInput }, deps);
   registerWbTool(server, { name: "get_search_report_product_orders", title: "Get product search orders", description: "Gets Wildberries product orders from search report data.", endpointKey: "searchReportProductOrders", inputSchema: wbReportInput }, deps);
+  registerWbTool(server, { name: "get_wb_warehouses_inventory", title: "Get WB warehouses inventory", description: "Gets current Wildberries inventory in WB warehouses from the official analytics API.", endpointKey: "wbWarehousesInventory", inputSchema: wbReportInput }, deps);
   registerWbTool(server, { name: "get_stocks_products", title: "Get stock product report", description: "Gets Wildberries stock report data by product.", endpointKey: "stocksProducts", inputSchema: wbReportInput }, deps);
   registerWbTool(server, { name: "get_stocks_groups", title: "Get stock group report", description: "Gets Wildberries stock report data grouped by product groups.", endpointKey: "stocksGroups", inputSchema: wbReportInput }, deps);
   registerWbTool(server, { name: "get_stocks_sizes", title: "Get stock size report", description: "Gets Wildberries stock report data by product size.", endpointKey: "stocksSizes", inputSchema: wbReportInput }, deps);

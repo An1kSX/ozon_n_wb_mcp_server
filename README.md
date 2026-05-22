@@ -108,6 +108,10 @@ Admin responses never include marketplace credentials.
 
 - `list_marketplace_accounts`
 - `get_advert_fullstats`
+- `list_wb_ad_campaigns`
+- `get_wb_ad_campaigns_info`
+- `get_search_cluster_list`
+- `get_search_cluster_daily_stats`
 - `get_auto_stat_words`
 - `get_campaign_stat_words`
 - `get_nm_report_detail`
@@ -118,6 +122,7 @@ Admin responses never include marketplace credentials.
 - `get_search_report_table_details`
 - `get_search_report_product_search_texts`
 - `get_search_report_product_orders`
+- `get_wb_warehouses_inventory`
 - `get_stocks_products`
 - `get_stocks_groups`
 - `get_stocks_sizes`
