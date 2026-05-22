@@ -13,13 +13,14 @@ export async function callWbApi({ db, config, accountId, endpointKey, input }) {
     url: `${endpoint.baseUrl}${endpoint.path}`,
     data: endpoint.method === "GET" ? undefined : input,
     params: endpoint.method === "GET" ? input : undefined,
-    headers: { Authorization: credentials.apiToken },
+    headers: { Authorization: wbAuthorizationHeader(credentials.apiToken) },
     validateStatus: () => true,
     timeout: 30000,
   });
 
   if (response.status === 401 || response.status === 403) {
-    const err = new Error("Marketplace rejected the configured account credentials");
+    const detail = safeWbError(response.data);
+    const err = new Error(`Wildberries rejected credentials for account "${accountId}" on ${endpoint.path} (${response.status})${detail ? `: ${detail}` : ""}`);
     err.statusCode = 502;
     throw err;
   }
@@ -34,6 +35,11 @@ export async function callWbApi({ db, config, accountId, endpointKey, input }) {
     throw err;
   }
   return response.data;
+}
+
+function wbAuthorizationHeader(apiToken) {
+  const token = String(apiToken || "").trim();
+  return /^Bearer\s+/i.test(token) ? token : `Bearer ${token}`;
 }
 
 function safeWbError(data) {

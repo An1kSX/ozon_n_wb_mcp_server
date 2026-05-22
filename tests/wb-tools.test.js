@@ -11,7 +11,7 @@ describe("Wildberries API client", () => {
     await createMarketplaceAccount({ db, config, id: "main", marketplace: "wildberries", name: "Main WB", credentials: { apiToken: "wb-secret-token" } });
 
     nock("https://advert-api.wildberries.ru", {
-      reqheaders: { Authorization: "wb-secret-token" },
+      reqheaders: { Authorization: "Bearer wb-secret-token" },
     })
       .get("/adv/v3/fullstats")
       .query({ ids: "123", beginDate: "2026-05-15", endDate: "2026-05-15" })
@@ -47,7 +47,7 @@ describe("Wildberries API client", () => {
     await createMarketplaceAccount({ db, config, id: "main", marketplace: "wildberries", name: "Main WB", credentials: { apiToken: "wb-secret-token" } });
 
     nock("https://seller-analytics-api.wildberries.ru", {
-      reqheaders: { Authorization: "wb-secret-token" },
+      reqheaders: { Authorization: "Bearer wb-secret-token" },
     })
       .post("/api/analytics/v3/sales-funnel/grouped/history", { period: { begin: "2026-04-01", end: "2026-04-30" } })
       .reply(200, { data: [] });
@@ -69,7 +69,7 @@ describe("Wildberries API client", () => {
     await createMarketplaceAccount({ db, config, id: "main", marketplace: "wildberries", name: "Main WB", credentials: { apiToken: "wb-secret-token" } });
 
     nock("https://advert-api.wildberries.ru", {
-      reqheaders: { Authorization: "wb-secret-token" },
+      reqheaders: { Authorization: "Bearer wb-secret-token" },
     })
       .get("/adv/v1/promotion/count")
       .reply(200, { adverts: [] });
@@ -83,6 +83,52 @@ describe("Wildberries API client", () => {
     });
 
     expect(data).toEqual({ adverts: [] });
+    await cleanup();
+  });
+
+  it("does not duplicate Bearer when a stored WB token already includes it", async () => {
+    const { db, config, cleanup } = await createTestApp();
+    await createMarketplaceAccount({ db, config, id: "main", marketplace: "wildberries", name: "Main WB", credentials: { apiToken: "Bearer wb-secret-token" } });
+
+    nock("https://advert-api.wildberries.ru", {
+      reqheaders: { Authorization: "Bearer wb-secret-token" },
+    })
+      .get("/adv/v1/promotion/count")
+      .reply(200, { adverts: [] });
+
+    const data = await callWbApi({
+      db,
+      config,
+      accountId: "main",
+      endpointKey: "advertCampaignsCount",
+      input: {},
+    });
+
+    expect(data).toEqual({ adverts: [] });
+    await cleanup();
+  });
+
+  it("returns a diagnostic WB credentials error without leaking the token", async () => {
+    const { db, config, cleanup } = await createTestApp();
+    await createMarketplaceAccount({ db, config, id: "main", marketplace: "wildberries", name: "Main WB", credentials: { apiToken: "wb-secret-token" } });
+
+    nock("https://advert-api.wildberries.ru")
+      .get("/adv/v1/promotion/count")
+      .reply(401, { message: "token category mismatch" });
+
+    try {
+      await callWbApi({
+        db,
+        config,
+        accountId: "main",
+        endpointKey: "advertCampaignsCount",
+        input: {},
+      });
+      throw new Error("Expected WB credentials error");
+    } catch (err) {
+      expect(err.message).toMatch(/Wildberries rejected credentials for account "main" on \/adv\/v1\/promotion\/count \(401\): token category mismatch/);
+      expect(err.message).not.toContain("wb-secret-token");
+    }
     await cleanup();
   });
 
